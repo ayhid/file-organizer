@@ -1,0 +1,15 @@
+# state, reports and personal rules never go in the repo
+*.db
+*.db-wal
+*.db-shm
+reports/
+rules.local.toml
+*.local.toml
+!rules.local.example.toml
+plan.csv
+dupes.csv
+
+__pycache__/
+*.pyc
+.DS_Store
+tests/_tmp/

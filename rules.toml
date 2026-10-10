@@ -1,0 +1,440 @@
+# file-organizer: generic rules.
+#
+# This file is PUBLIC. Keep anything personal (client names, school, people, folder names
+# that reveal private matters, real paths) in your local overrides file, by default
+#   ~/.file-organizer/rules.local.toml
+# It is merged on top of this one: tables merge, arrays are concatenated with LOCAL ITEMS
+# FIRST (so your classify rules win), plain values are replaced.
+# See rules.local.example.toml.
+
+[paths]
+source = "~/Downloads"
+target = "~/Documents/Organized"
+state = "~/.file-organizer/state.db"       # reports go to <state folder>/reports
+local_rules = "~/.file-organizer/rules.local.toml"
+
+[inventory]
+ignore_names = [".DS_Store", "Icon\r", "Thumbs.db", "desktop.ini", ".localized"]
+# relative paths (globs) never scanned
+ignore_paths = ["_to_delete", "_to_delete/*", "$RECYCLE.BIN", "$RECYCLE.BIN/*"]
+
+[hash]
+algo = "blake2b"       # blake2b | sha256 | md5 (any hashlib name)
+chunk = 65536          # bytes read at the start and the end for the partial hash
+
+# --------------------------------------------------------------------------- families
+# extension -> family. Used for reports, unit kinds and classification.
+[families]
+image = ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tif", "tiff", "avif", "ico",
+         "cr2", "cr3", "nef", "dng", "arw", "raf"]
+vector = ["svg", "svgz", "eps"]
+design = ["ai", "psd", "fig", "sketch", "xd", "afdesign", "afphoto", "kra", "aseprite", "xcf",
+          "excalidraw", "indd", "krecorder", "oxs"]
+document = ["pdf", "doc", "docx", "odt", "rtf", "txt", "md", "pages", "tex", "latex"]
+spreadsheet = ["xls", "xlsx", "ods", "numbers"]
+presentation = ["ppt", "pptx", "odp", "key"]
+font = ["ttf", "otf", "woff", "woff2", "eot", "fon", "pfb", "pfm", "ttc"]
+embroidery = ["pes", "pec", "dst", "exp", "hus", "vp3", "jef", "xxx", "vip", "sew", "emb", "pcs", "shv", "jan"]
+model3d = ["stl", "3mf", "obj", "step", "stp", "f3d", "fbx", "blend", "gcode", "bgcode", "scad", "iges",
+           "igs", "ply", "lys", "chitubox", "ctb"]
+archive = ["zip", "rar", "7z", "tar", "gz", "tgz", "xz", "bz2", "zst", "tar.gz", "tar.xz", "tar.bz2", "tmp"]
+installer = ["dmg", "pkg", "mpkg", "apk", "exe", "msi", "deb", "rpm", "appimage", "xip"]
+disk_image = ["img", "iso", "vmdk", "qcow2"]
+video = ["mp4", "mov", "mkv", "avi", "webm", "m4v", "wmv"]
+audio = ["mp3", "wav", "m4a", "flac", "aac", "ogg", "opus", "aiff", "aif"]
+code = ["js", "mjs", "cjs", "ts", "tsx", "jsx", "py", "h", "hpp", "c", "cpp", "cc", "m", "mm", "swift",
+        "java", "kt", "go", "rs", "rb", "php", "sh", "zsh", "bash", "css", "scss", "less", "html", "htm",
+        "vue", "svelte", "sql", "lua", "gd", "cs", "ino", "xcscheme", "plist", "nib", "strings", "map"]
+data = ["json", "csv", "tsv", "xml", "yaml", "yml", "toml", "log", "ndjson", "sqlite", "db", "ini", "har"]
+ebook = ["epub", "mobi", "azw3", "cbz", "cbr", "djvu"]
+calendar = ["ics", "vcf"]
+gps = ["gpx", "kml", "kmz", "fit"]
+torrent = ["torrent"]
+subtitle = ["srt", "vtt", "ass", "sub"]
+rom = ["sfc", "smc", "nes", "gba", "gb", "gbc", "nds", "n64", "z64", "gen", "sms", "gg", "pce", "ws", "wsc", "a26"]
+firmware = ["bin", "bbf", "hex", "uf2", "fw"]
+email = ["eml", "msg", "mbox"]
+link = ["webloc", "url"]
+
+# --------------------------------------------------------------------------- units
+[units]
+# a unit's kind is its dominant family when that family holds at least this share of its files
+family_threshold = 0.6
+# Folders that are containers, not units: their sub-folders become units and their loose files
+# stay standalone. Globs on the relative path; "X/*" makes every sub-folder of X a container too.
+collections = ["Documents", "Images", "Archives", "Other", "Code", "Videos", "Music", "Downloads",
+               "Organized", "Organized/*", "Recents"]
+
+# file that marks a project root (its folder is the unit)
+[units.marker_files]
+"package.json" = "node"
+"pyproject.toml" = "python"
+"setup.py" = "python"
+"requirements.txt" = "python"
+"Cargo.toml" = "rust"
+"go.mod" = "go"
+"composer.json" = "php"
+"Gemfile" = "ruby"
+"pom.xml" = "java"
+"build.gradle" = "java"
+"CMakeLists.txt" = "cmake"
+"Makefile" = "make"
+"project.godot" = "godot"
+"*.sln" = "dotnet"
+"*.csproj" = "dotnet"
+"platformio.ini" = "embedded"
+"*.ino" = "embedded"
+"pubspec.yaml" = "flutter"
+"docker-compose.yml" = "docker"
+"Dockerfile" = "docker"
+
+# directory that marks a project root (its PARENT is the unit)
+[units.marker_dirs]
+".git" = "git"
+"*.xcodeproj" = "xcode"
+"*.xcworkspace" = "xcode"
+
+# directory that is itself an indivisible bundle
+[units.bundles]
+"*.app" = "app"
+"*.framework" = "app"
+"*.bundle" = "app"
+"*.plugin" = "app"
+"*.photoslibrary" = "photos-library"
+"*.fcpbundle" = "video-project"
+"*.logicx" = "audio-project"
+"*.band" = "audio-project"
+"*.rtfd" = "document"
+"*.pages" = "document"
+"*.numbers" = "spreadsheet"
+"*.key" = "presentation"
+
+# --------------------------------------------------------------------------- duplicates
+[dupes]
+# keeper preference, best first (globs on relative path)
+prefer = ["Organized/*", "Documents/*"]
+avoid = ["_to_delete/*", "*/_to_delete/*", "*/.Trash/*", "$RECYCLE.BIN/*"]
+
+# --------------------------------------------------------------------------- naming
+[rename]
+max_length = 80
+# regexes removed from the name before slugifying (case-insensitive)
+strip_patterns = [
+  '\s+at\s+\d{1,2}[.:h]\d{2}([.:]\d{2})?',  # "WhatsApp Image 2025-12-04 at 18.20.59"
+  '\s*-\s*copie$',
+]
+[rename.ext_aliases]
+".jpeg" = ".jpg"
+".tif" = ".tiff"
+".htm" = ".html"
+".yml" = ".yaml"
+
+[review]
+# names that say nothing about the content: flagged for review (Claude proposes a name)
+meaningless_names = [
+  '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}',   # uuid
+  '^[0-9a-f]{16,}$',                              # long hex
+  '^\d+$',                                        # digits only
+  '^(img|dsc|dscn|scan|document|untitled|sans[ _-]?titre|file|files|download|image|photo)[ _-]*\d*$',
+]
+
+[dates]
+min_year = 1995
+# when a dated rule finds no date in the name, look in the PDF text near these words
+pdf_keywords = ["date de facture", "date d'émission", "date d’émission", "date :", "date:", "invoice date",
+                "date of issue", "émis le", "fait le", "le ", "date"]
+# fall back to the PDF creation date when the text has none
+use_pdf_metadata = true
+
+# Client / project names are personal: define them in rules.local.toml, e.g.
+# [[clients]]
+# pattern = 'acme|acme[-_ ]corp'
+# slug = "acme"
+
+# --------------------------------------------------------------------------- classification
+# First matching rule wins. Conditions (all must match when present):
+#   item     = "file" | "unit"
+#   kind     = unit kinds          family = file families      ext = [".pdf", ...]
+#   name_re  = regex on the name (case-insensitive, accents folded)
+#   path     = globs on the relative source path
+#   client   = true -> a [[clients]] pattern must match the path ({client} becomes its slug)
+# Actions:
+#   target   = folder under the target root; placeholders {year} {client} {kind} {family}
+#   dated    = true -> the date goes before the extension: name_YYYY-MM-DD.ext
+#   precision= "day" | "month" | "year"
+#   review   = true -> always flagged for review
+
+[[classify.rules]]
+name = "credentials"
+name_re = '(^|[^a-z])(\.ssh|id_rsa|id_ed25519|credential|client[_-]?secret|password|passwd|\.kdbx|\.pem|\.p12|\.pfx|keychain|1password.*export|dashlane.*export|bitwarden.*export)'
+target = "_sensitive"
+review = true
+reason = "credentials: move to a password manager or a secure location"
+
+# ---- units (folders handled as a whole)
+[[classify.rules]]
+name = "code-projects"
+item = "unit"
+kind = ["git", "node", "python", "rust", "go", "php", "ruby", "java", "cmake", "make", "godot",
+        "dotnet", "embedded", "flutter", "docker", "xcode"]
+target = "dev/projects"
+
+[[classify.rules]]
+name = "apps"
+item = "unit"
+kind = ["app"]
+target = "software/apps"
+
+[[classify.rules]]
+name = "font-families"
+item = "unit"
+kind = ["font"]
+target = "design/fonts"
+
+[[classify.rules]]
+name = "embroidery-sets"
+item = "unit"
+kind = ["embroidery"]
+target = "making/embroidery"
+
+[[classify.rules]]
+name = "3d-kits"
+item = "unit"
+kind = ["model3d"]
+target = "making/3d-print"
+
+[[classify.rules]]
+name = "image-sets"
+item = "unit"
+kind = ["image"]
+target = "media/image-sets"
+
+[[classify.rules]]
+name = "vector-sets"
+item = "unit"
+kind = ["vector", "design"]
+target = "design/assets"
+
+[[classify.rules]]
+name = "media-folders"
+item = "unit"
+kind = ["video", "audio", "photos-library", "video-project", "audio-project"]
+target = "media/{kind}"
+
+[[classify.rules]]
+name = "document-folders"
+item = "unit"
+kind = ["document", "spreadsheet", "presentation"]
+target = "documents/folders"
+
+[[classify.rules]]
+name = "code-folders"
+item = "unit"
+kind = ["code", "data"]
+target = "dev/snippets"
+
+[[classify.rules]]
+name = "rom-folders"
+item = "unit"
+kind = ["rom"]
+target = "retro-gaming/roms"
+
+[[classify.rules]]
+name = "other-folders"
+item = "unit"
+target = "_review/folders"
+review = true
+reason = "mixed folder: choose a place"
+
+# ---- standalone files
+[[classify.rules]]
+name = "installers"
+family = ["installer"]
+target = "software/installers"
+
+[[classify.rules]]
+name = "disk-images"
+family = ["disk_image"]
+target = "software/disk-images"
+
+[[classify.rules]]
+name = "torrents"
+family = ["torrent", "subtitle"]
+target = "media/torrents"
+
+[[classify.rules]]
+name = "roms"
+family = ["rom"]
+target = "retro-gaming/roms"
+
+[[classify.rules]]
+name = "firmware"
+family = ["firmware"]
+target = "software/firmware"
+
+[[classify.rules]]
+name = "invoices"
+family = ["document", "spreadsheet", "image", "code"]
+name_re = '(factur|invoice|receipt|recu|justificatif|quittance|avoir|bon[-_ ]?(de[-_ ]?)?(commande|envoi)|order[-_ ]?confirmation)'
+target = "admin/invoices/{year}"
+dated = true
+precision = "month"
+
+[[classify.rules]]
+name = "finance"
+family = ["document", "spreadsheet", "image"]
+name_re = '(releve|statement|bulletin[-_ ]?(de[-_ ]?)?(paie|salaire)|payslip|fiche[-_ ]?de[-_ ]?paie|avis[-_ ]?d.?imposition|impot|tax[-_ ]?return)'
+target = "admin/finance/{year}"
+dated = true
+precision = "month"
+
+[[classify.rules]]
+name = "official"
+family = ["document", "image"]
+name_re = '(attestation|certificat|certificate|passeport|passport|carte[-_ ]?d.?identite|identity[-_ ]?card|titre[-_ ]?de[-_ ]?sejour|acte[-_ ]?de|convocation|mandat|procuration|diplome|diploma)'
+target = "admin/official"
+dated = true
+precision = "day"
+
+[[classify.rules]]
+name = "contracts"
+family = ["document"]
+name_re = '(contrat|contract|convention|bail|lease|avenant|devis|quote|quotation|cgv|terms[-_ ]?of)'
+target = "admin/contracts"
+dated = true
+precision = "day"
+
+[[classify.rules]]
+name = "client-work"
+client = true
+target = "work/clients/{client}"
+
+[[classify.rules]]
+name = "photos"
+family = ["image"]
+name_re = '^(img[_-]?\d|dsc|pxl_|whatsapp[ _]image|photo|\d{8}[_-]\d{6}|\d{4}-\d{2}-\d{2}[ _]photo)'
+target = "media/photos/{year}"
+dated = true
+precision = "day"
+
+[[classify.rules]]
+name = "phone-photos"
+ext = [".heic", ".heif", ".dng"]
+target = "media/photos/{year}"
+dated = true
+precision = "day"
+
+[[classify.rules]]
+name = "screenshots"
+family = ["image"]
+name_re = '(screenshot|screen[ _-]?shot|capture[ _-]?d.?ecran|mermaid[-_]diagram)'
+target = "media/screenshots"
+dated = true
+precision = "day"
+
+[[classify.rules]]
+name = "ai-images"
+family = ["image"]
+name_re = '(chatgpt[ _-]?image|dall[-_ ]?e|midjourney|gemini[_-]generated|firefly|flux[-_])'
+target = "media/ai-generated"
+
+[[classify.rules]]
+name = "images"
+family = ["image"]
+target = "media/images"
+
+[[classify.rules]]
+name = "vectors"
+family = ["vector"]
+target = "design/vectors"
+
+[[classify.rules]]
+name = "design-sources"
+family = ["design"]
+target = "design/sources"
+
+[[classify.rules]]
+name = "fonts"
+family = ["font"]
+target = "design/fonts/_loose"
+
+[[classify.rules]]
+name = "embroidery"
+family = ["embroidery"]
+target = "making/embroidery/_loose"
+
+[[classify.rules]]
+name = "3d-models"
+family = ["model3d"]
+target = "making/3d-print/models"
+
+[[classify.rules]]
+name = "videos"
+family = ["video"]
+target = "media/videos"
+
+[[classify.rules]]
+name = "audio"
+family = ["audio"]
+target = "media/audio"
+
+[[classify.rules]]
+name = "ebooks"
+family = ["ebook"]
+target = "library/ebooks"
+
+[[classify.rules]]
+name = "spreadsheets"
+family = ["spreadsheet"]
+target = "documents/spreadsheets"
+
+[[classify.rules]]
+name = "presentations"
+family = ["presentation"]
+target = "documents/presentations"
+
+[[classify.rules]]
+name = "notes"
+ext = [".md", ".txt"]
+target = "documents/notes"
+
+[[classify.rules]]
+name = "documents"
+family = ["document"]
+target = "documents"
+
+[[classify.rules]]
+name = "code"
+family = ["code"]
+target = "dev/snippets"
+
+[[classify.rules]]
+name = "data-exports"
+family = ["data"]
+target = "dev/data-exports"
+
+[[classify.rules]]
+name = "calendar"
+family = ["calendar"]
+target = "documents/calendar"
+
+[[classify.rules]]
+name = "gps"
+family = ["gps"]
+target = "media/gps"
+
+[[classify.rules]]
+name = "emails"
+family = ["email"]
+target = "documents/emails"
+
+[[classify.rules]]
+name = "archives"
+family = ["archive"]
+target = "archives"
+
+[[classify.rules]]
+name = "fallback"
+target = "_review"
+review = true
+reason = "no rule matched"

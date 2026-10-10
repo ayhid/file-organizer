@@ -1,0 +1,45 @@
+# Personal overrides. Copy to ~/.file-organizer/rules.local.toml (outside the repo) and edit.
+# Merged on top of rules.toml: arrays are prepended, so these rules are tried first.
+# Never commit your real copy: it holds client names, people, schools and folder names.
+
+[paths]
+source = "~/Downloads"
+target = "~/Documents/Organized"
+
+[units]
+# extra container folders in YOUR source (their sub-folders become units, their files stay standalone)
+collections = ["Manual Library", "Mail export", "Mail export/*"]
+
+[dupes]
+# where the best copy usually lives
+prefer = ["Clients/*"]
+
+# client or project names -> {client} placeholder of the "client-work" rule
+[[clients]]
+pattern = 'acme[-_ ]?corp|acme'
+slug = "acme"
+
+[[clients]]
+pattern = 'globex'
+slug = "globex"
+
+# personal classification rules (tried before the generic ones)
+[[classify.rules]]
+name = "my-company-invoices"
+name_re = '(facture|invoice).*(mycompany)|(mycompany).*(facture|invoice)'
+target = "work/business/invoices/{year}"
+dated = true
+precision = "month"
+
+[[classify.rules]]
+name = "school"
+name_re = '(school-portal|my-school-name|inscription)'
+target = "admin/school"
+dated = true
+precision = "day"
+
+[[classify.rules]]
+name = "retro-handheld"
+item = "unit"
+path = ["Platforms", "Assets"]
+target = "retro-gaming/handheld"
