@@ -383,14 +383,16 @@ DATE_PATTERNS = [
     ("day", re.compile(rf"(?<!\d){Y}(?P<sep>[-_. ]?)(?P<m>0[1-9]|1[0-2])(?P=sep)(?P<d>0[1-9]|[12]\d|3[01])(?!\d)")),
     # 03/04/2025, 03-04-2025, 3.4.2025 (day first, French order)
     ("day", re.compile(rf"(?<!\d)(?P<d>0?[1-9]|[12]\d|3[01])(?P<sep>[-/._])(?P<m>0?[1-9]|1[0-2])(?P=sep){Y}(?!\d)")),
-    # 11 mars 2026 / 11 March 2026
-    ("day", re.compile(rf"(?<!\d)(?P<d>[0-3]?\d)(?:er)?\s+(?P<mn>{_MONTH_ALT})\.?\s+{Y}(?!\d)", re.I)),
-    # Mar 11, 2026
-    ("day", re.compile(rf"\b(?P<mn>{_MONTH_ALT})\.?\s+(?P<d>[0-3]?\d),?\s+{Y}(?!\d)", re.I)),
+    # 23052025 (day first, no separator)
+    ("day", re.compile(rf"(?<!\d)(?P<d>0[1-9]|[12]\d|3[01])(?P<m>0[1-9]|1[0-2]){Y}(?!\d)")),
+    # 11 mars 2026 / 11 March 2026 / 11_mars_2026
+    ("day", re.compile(rf"(?<![\da-z])(?P<d>[0-3]?\d)(?:er)?[\s_-]+(?P<mn>{_MONTH_ALT})\.?[\s_-]+{Y}(?!\d)", re.I)),
+    # Mar 11, 2026 / Feb_16__2026
+    ("day", re.compile(rf"(?<![a-z])(?P<mn>{_MONTH_ALT})\.?[\s_-]+(?P<d>[0-3]?\d),?[\s_-]+{Y}(?!\d)", re.I)),
     # 2026-02, 2026_02
     ("month", re.compile(rf"(?<!\d){Y}[-_](?P<m>0[1-9]|1[0-2])(?![\d])")),
     # mars 2026 / March 2026
-    ("month", re.compile(rf"\b(?P<mn>{_MONTH_ALT})\.?\s+{Y}(?!\d)", re.I)),
+    ("month", re.compile(rf"(?<![a-z])(?P<mn>{_MONTH_ALT})\.?[\s_-]+{Y}(?!\d)", re.I)),
     # 2026 alone (only used when a rule asks for year precision)
     ("year", re.compile(rf"(?<![\d])(?P<y>20[0-3]\d)(?![\d])")),
 ]

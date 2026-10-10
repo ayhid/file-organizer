@@ -140,6 +140,8 @@ meaningless_names = [
 
 [dates]
 min_year = 1995
+# a date already present in ANY file name is kept: normalised and moved before the extension
+keep_name_dates = true
 # when a dated rule finds no date in the name, look in the PDF text near these words
 pdf_keywords = ["date de facture", "date d'émission", "date d’émission", "date :", "date:", "invoice date",
                 "date of issue", "émis le", "fait le", "le ", "date"]

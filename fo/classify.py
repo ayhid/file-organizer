@@ -124,6 +124,7 @@ def main():
     rules, pdf = Rules(ctx.cfg), PdfDates(ctx)
     budget = Budget(ctx.args.budget)
     min_year = int(ctx.cfg.get("dates", {}).get("min_year", 1995))
+    keep_name_dates = bool(ctx.cfg.get("dates", {}).get("keep_name_dates", True))
 
     with Run(ctx, "classify") as run:
         frozen = {(r["item_type"], r["item_id"]) for r in
@@ -149,7 +150,7 @@ def main():
             if budget.exceeded():
                 complete = False
                 break
-            row = _decide(it, removed.get(key), rules, pdf, min_year)
+            row = _decide(it, removed.get(key), rules, pdf, min_year, keep_name_dates)
             counts[row["rule"]] = counts.get(row["rule"], 0) + 1
             db.execute("""
                 INSERT INTO plan(item_type,item_id,src,family,rule,action,target_dir,dated,precision,
@@ -182,7 +183,7 @@ def main():
     sys.exit(0 if complete else INCOMPLETE)
 
 
-def _decide(it, removed_reason, rules: Rules, pdf: PdfDates, min_year: int) -> dict:
+def _decide(it, removed_reason, rules: Rules, pdf: PdfDates, min_year: int, keep_name_dates: bool = True) -> dict:
     out = {"family": it["family"], "dated": 0, "precision": None, "date_found": None,
            "date_source": None, "needs_review": 0, "reason": None}
     if removed_reason:
@@ -211,6 +212,12 @@ def _decide(it, removed_reason, rules: Rules, pdf: PdfDates, min_year: int) -> d
         else:
             review = True
             reasons.append("no date found")
+    elif it["type"] == "file" and keep_name_dates:
+        # a date already written in the name is relevant: normalise it and move it before the extension
+        hit = find_date(os.path.splitext(it["name"])[0], min_year=min_year)
+        if hit:
+            date = (hit[0], hit[1], "name")
+            out.update(dated=1, precision=hit[1], date_found=hit[0], date_source="name")
 
     stem = it["name"] if it["type"] == "unit" else os.path.splitext(it["name"])[0]
     if it["type"] == "file" and rules.is_meaningless(stem):
