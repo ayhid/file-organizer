@@ -4,7 +4,7 @@ Small, deterministic Python scripts to profile a messy folder (typically `~/Down
 duplicates, and move everything into a clean tree with consistent names. Nothing moves until
 you have reviewed the plan, and every move can be undone.
 
-Standard library only (Python 3.11+, or 3.10 with `pip install tomli`). Optional: `pdftotext` /
+Standard library only (Python 3.11+, or 3.9 / 3.10 with `pip install tomli`). Optional: `pdftotext` /
 `pdfinfo` (poppler) to read dates inside PDFs.
 
 ## Pipeline
@@ -63,6 +63,27 @@ that run installed.
 **Review.** Rows are flagged when the name says nothing (uuid, hex, `IMG_1234`), a dated rule found
 no date, no rule matched, or the rule asks for it (credentials, mixed folders). Flagged rows are
 skipped by `apply.py` unless `--include-review`.
+
+## Routine (periodic run)
+
+`routine.sh` runs the whole analysis and refreshes the plan. It never moves, deletes or installs
+anything. State, personal rules, reports and logs live in `FO_HOME` (default
+`~/Downloads/.file-organizer`, which the scan ignores), so every run picks up where the last one left off.
+
+```bash
+FO_SOURCE=~/Downloads MAX_SECONDS=170 ./routine.sh   # exit 3 + "ROUTINE: RESUME" = call again
+```
+
+Outputs: `reports/review.csv` (rows that need a decision), `reports/plan.csv`, `reports/profile.md`,
+`reports/dupes.csv`. You then review and run `fo/apply.py --apply` yourself.
+
+**Fonts** need macOS itself. `macos/install-fonts-job.sh` installs a launchd agent (weekly, Sunday
+22:00 by default) that runs `apply.py --only install --apply` against the same state:
+
+```bash
+bash macos/install-fonts-job.sh --run-now   # install + first run (accept the macOS prompts)
+bash macos/install-fonts-job.sh --uninstall
+```
 
 ## Personal rules stay out of this repo
 

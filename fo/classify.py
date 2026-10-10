@@ -9,6 +9,7 @@
 Rows edited by hand (locked=1) or already applied are never touched.
 Exit code 3 means the time budget ran out (PDF reading): run again to continue.
 """
+from __future__ import annotations
 import datetime as dt
 import os
 import re

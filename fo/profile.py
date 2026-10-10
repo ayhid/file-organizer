@@ -3,6 +3,7 @@
 
 Writes reports/profile.md and reports/extensions.csv, prints a short summary.
 """
+from __future__ import annotations
 import csv
 import os
 import sys

@@ -4,6 +4,7 @@
 Incremental: unchanged files keep their row (and their hashes); files that disappeared
 are flagged missing=1. Unreadable folders are logged in `scan_errors`.
 """
+from __future__ import annotations
 import os
 import sys
 

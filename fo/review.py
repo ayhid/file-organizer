@@ -8,6 +8,7 @@
 Editable columns: action (move | delete | skip | install), target_dir, new_name, needs_review.
 Locked rows are never overwritten by classify.py or rename.py.
 """
+from __future__ import annotations
 import collections as C
 import csv
 import os

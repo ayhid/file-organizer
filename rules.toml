@@ -16,7 +16,8 @@ local_rules = "~/.file-organizer/rules.local.toml"
 [inventory]
 ignore_names = [".DS_Store", "Icon\r", "Thumbs.db", "desktop.ini", ".localized"]
 # relative paths (globs) never scanned
-ignore_paths = ["_to_delete", "_to_delete/*", "$RECYCLE.BIN", "$RECYCLE.BIN/*"]
+ignore_paths = ["_to_delete", "_to_delete/*", "$RECYCLE.BIN", "$RECYCLE.BIN/*",
+                ".file-organizer", ".file-organizer/*"]   # the routine's own state folder
 
 [hash]
 algo = "blake2b"       # blake2b | sha256 | md5 (any hashlib name)

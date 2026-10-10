@@ -8,6 +8,7 @@
 A hash is reused while the file's size and mtime are unchanged.
 Exit code 3 means the time budget ran out: run again to continue.
 """
+from __future__ import annotations
 import hashlib
 import os
 import sys

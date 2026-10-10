@@ -10,6 +10,7 @@
 Name clashes inside the same target folder get -2, -3... (also against files already on disk).
 Rows edited by hand (locked=1) keep their name but still reserve it.
 """
+from __future__ import annotations
 import collections as C
 import os
 import re

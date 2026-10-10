@@ -14,6 +14,7 @@ Keeper rule ("best-classified path"), first difference wins:
   6. shortest path
 Writes dup_groups / dup_members and reports/dupes.csv.
 """
+from __future__ import annotations
 import collections as C
 import csv
 import hashlib

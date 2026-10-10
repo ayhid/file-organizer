@@ -9,6 +9,7 @@ A file belongs to the OUTERMOST of:
 Files whose ancestors are all collections (or that sit at the source root) stay standalone.
 Files inside a unit are never hashed individually, deduplicated or renamed.
 """
+from __future__ import annotations
 import collections as C
 import hashlib
 import os

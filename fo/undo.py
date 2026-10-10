@@ -10,6 +10,7 @@ Dry run unless --yes.
   trash   -> moved back out of the Trash (items trashed through Finder: use Put Back)
   install -> the installed font is removed, unless it was already installed before the run
 """
+from __future__ import annotations
 import os
 import shutil
 import sys

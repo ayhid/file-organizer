@@ -11,6 +11,7 @@
 Rows flagged needs_review are skipped unless --include-review.
 Every operation is logged in `ops` BEFORE it happens, so undo.py can always reverse a run.
 """
+from __future__ import annotations
 import collections as C
 import os
 import sys

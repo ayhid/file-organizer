@@ -2,6 +2,7 @@
 
 Uses only fake names. Never touches your real state, rules, fonts or Trash: everything lives in a temp dir.
 """
+from __future__ import annotations
 import os
 import shutil
 import sqlite3
