@@ -90,7 +90,7 @@ class Pipeline(unittest.TestCase):
         shutil.rmtree(cls.tmp, ignore_errors=True)
 
     def fo(self, script, *args, check=True):
-        cmd = [sys.executable, "-I", str(REPO / "fo" / f"{script}.py"), *args,
+        cmd = [sys.executable, str(REPO / "fo" / f"{script}.py"), *args,
                "--source", str(self.src), "--target", str(self.dst), "--state", str(self.state),
                "--local-rules", str(self.local)]
         p = subprocess.run(cmd, capture_output=True, text=True)

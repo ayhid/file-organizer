@@ -10,7 +10,7 @@ BUDGET="${BUDGET:-0}"
 
 step() {
   echo "== $1"
-  "$PY" -I "$DIR/fo/$1.py" "${@:2}"
+  "$PY" "$DIR/fo/$1.py" "${@:2}"
 }
 
 resumable() {  # exit code 3 = budget reached, run again
