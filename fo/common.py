@@ -212,6 +212,14 @@ def meta_set(db: sqlite3.Connection, key: str, value: str) -> None:
                (key, value))
 
 
+_OPEN: list = []  # contexts created in this process (closed by close_all, used by in-process tests)
+
+
+def close_all() -> None:
+    while _OPEN:
+        _OPEN.pop().db.close()
+
+
 class Context:
     """Parsed args + config + db + resolved paths, shared by every script."""
 
@@ -221,6 +229,7 @@ class Context:
         paths = self.cfg.get("paths", {})
         self.state = expand(args.state or paths.get("state", "~/.file-organizer/state.db"))
         self.db = connect(self.state)
+        _OPEN.append(self)
         src = args.source or meta_get(self.db, "source") or paths.get("source")
         tgt = args.target or paths.get("target")
         self.source = expand(src) if src else None
@@ -314,8 +323,9 @@ def family_of(ext: str, families: dict[str, str]) -> str:
 
 
 def glob_any(relpath: str, patterns) -> bool:
-    low = relpath.lower()
-    return any(fnmatch.fnmatchcase(low, p.lower()) for p in patterns or [])
+    """Case- and Unicode-normalisation-insensitive glob ('*' also crosses '/')."""
+    low = nfc(relpath).lower()
+    return any(fnmatch.fnmatchcase(low, nfc(p).lower()) for p in patterns or [])
 
 
 def human(n: float) -> str:
@@ -328,14 +338,21 @@ def human(n: float) -> str:
 
 # --------------------------------------------------------------------------- naming
 
-COPY_SUFFIX_RE = re.compile(r"(\s*\(\d+\)|\s+\d{1,2}|[\s_-]+copy(\s*\d+)?|[\s_-]+copie(\s*\d+)?)$", re.I)
+# " (1)" browsers, " 2".." 9" Finder duplicates, " copy" / " copy 2" macOS, " - copie" Windows FR.
+# Deliberately NOT any trailing number: "Windows 10" or "Chapter 1" are real names.
+COPY_SUFFIX_RE = re.compile(r"(\s*\(\d{1,3}\)|\s+[2-9]|[\s_-]+copy(\s+\d{1,3})?|[\s_-]+copie(\s+\d{1,3})?)$", re.I)
 
 
 def strip_copy_suffix(stem: str) -> str:
-    prev = None
-    while prev != stem:
-        prev, stem = stem, COPY_SUFFIX_RE.sub("", stem).strip()
-    return stem or prev
+    """Remove copy markers repeatedly ("x (1) 2" -> "x"). Never returns an empty name:
+    a name made only of a marker ("(1)") is kept as is."""
+    cur = stem
+    while True:
+        nxt = COPY_SUFFIX_RE.sub("", cur).strip()
+        if not nxt or nxt == cur:
+            break
+        cur = nxt
+    return cur if cur.strip() else stem
 
 
 def slugify(text: str) -> str:

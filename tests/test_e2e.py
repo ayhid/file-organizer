@@ -123,10 +123,16 @@ slug = "globex"
     def db(self):
         con = sqlite3.connect(self.state)
         con.row_factory = sqlite3.Row
+        self.addCleanup(con.close)
         return con
 
     def plan_for(self, src):
-        return self.db().execute("SELECT * FROM plan WHERE src=?", (src,)).fetchone()
+        con = sqlite3.connect(self.state)
+        con.row_factory = sqlite3.Row
+        try:
+            return con.execute("SELECT * FROM plan WHERE src=?", (src,)).fetchone()
+        finally:
+            con.close()
 
     def test_pipeline(self):
         for s in ("inventory", "units", "hash", "dupes", "profile", "classify", "rename"):

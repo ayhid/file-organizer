@@ -1,0 +1,4 @@
+# Test-only dependencies. The scripts themselves use the standard library only.
+hypothesis>=6.100
+coverage>=7.4
+tomli>=2.0; python_version < "3.11"

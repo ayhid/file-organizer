@@ -32,16 +32,17 @@ def main():
         existing = {r["path"]: (r["size"], r["mtime"]) for r in db.execute("SELECT path,size,mtime FROM files")}
         batch, seen, n_new, n_changed = [], 0, 0, 0
         for dirpath, dirnames, filenames in os.walk(root, onerror=onerror, followlinks=False):
-            rel_dir = nfc(os.path.relpath(dirpath, root))
+            # paths are stored exactly as on disk (NFC/NFD untouched) so every later step can reopen
+            # them on any filesystem; comparisons normalise (glob_any, slugify, find_date)
+            rel_dir = os.path.relpath(dirpath, root)
             rel_dir = "" if rel_dir == "." else rel_dir
-            # never descend into our own output folders if they live inside the source
-            dirnames[:] = [d for d in dirnames
-                           if not glob_any(os.path.join(rel_dir, nfc(d)), ignore_paths)]
+            # never descend into ignored folders (e.g. our own outputs if they live inside the source)
+            dirnames[:] = [d for d in dirnames if not glob_any(os.path.join(rel_dir, d), ignore_paths)]
             for fn in filenames:
-                if fn in ignore or fn.startswith("._"):
+                if nfc(fn) in ignore or fn.startswith("._"):
                     continue
                 full = os.path.join(dirpath, fn)
-                rel = nfc(os.path.join(rel_dir, fn)) if rel_dir else nfc(fn)
+                rel = os.path.join(rel_dir, fn) if rel_dir else fn
                 if glob_any(rel, ignore_paths):
                     continue
                 try:
@@ -51,8 +52,8 @@ def main():
                     continue
                 if not os.path.isfile(full) or os.path.islink(full):
                     continue
-                name = nfc(fn)
-                ext = ext_of(name)
+                name = fn
+                ext = ext_of(nfc(name))
                 prev = existing.get(rel)
                 if prev is None:
                     n_new += 1

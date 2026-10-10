@@ -72,6 +72,28 @@ are prepended, so personal classify rules win. The state DB and reports also liv
 
 ## Tests
 
+Every step and helper has unit tests, and the logic that must never fail has property tests
+([Hypothesis](https://hypothesis.readthedocs.io)) that try hundreds of random inputs:
+
+| Area | Properties checked |
+|---|---|
+| names | slug is idempotent, only `[alnum-]`, lowercase, no accents; copy-suffix removal is idempotent and never empties a name; `stem + ext == name` |
+| dates | any date written in 12 formats (and French month names) inside random text is found exactly; never raises; never invents a date out of range; never formats more precisely than found |
+| config | local overrides: tables merge, arrays prepend, scalars win, inputs never mutated |
+| units | roots never nest; every file sits under its unit root; standalone only under collections |
+| hashing | full hash equal ⇔ content equal; a change in the middle of a big file is caught by the full hash |
+| duplicates | groups equal the ground truth by content; exactly one keeper per group; keeper order is total and deterministic |
+| plan | every standalone file and unit gets exactly one row; deletes are exactly the redundant copies; targets never escape the target root; re-running the pipeline gives the same plan |
+| apply / undo | on random trees: no file lost, nothing pre-existing overwritten, installed fonts identical to trashed originals, and undo restores source, target, font folder and Trash byte for byte |
+
+Everything runs in temp folders: your real files, fonts and Trash are never touched.
+
 ```bash
-python3 -m unittest discover -s tests -v
+pip install -r requirements-dev.txt
+cd tests
+python3 -m unittest discover -s . -v                          # ~20 s
+FO_EXAMPLES=500 python3 -m unittest discover -s .             # thorough property run
+coverage run --source=../fo -m unittest discover -s . && coverage report -m
 ```
+
+CI (`.github/workflows/tests.yml`) runs the suite on Linux and macOS, Python 3.10 and 3.13.
