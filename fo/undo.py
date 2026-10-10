@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
-"""Reverse an apply run: every operation is moved back, newest first.
+"""Reverse an apply run, newest operation first.
 
   undo.py --list          show apply runs
-  undo.py --run 12        reverse run 12
-  undo.py --last          reverse the most recent apply run
+  undo.py --run 12 --yes  reverse run 12
+  undo.py --last --yes    reverse the most recent apply run
 Dry run unless --yes.
+
+  move    -> moved back (a copy left by a cross-volume move is removed instead)
+  trash   -> moved back out of the Trash (items trashed through Finder: use Put Back)
+  install -> the installed font is removed, unless it was already installed before the run
 """
 import os
+import shutil
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import fonts  # noqa: E402
 from common import Run, move_path, setup  # noqa: E402
 
 
@@ -17,7 +23,29 @@ def add_args(ap):
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--run", type=int)
     ap.add_argument("--last", action="store_true")
-    ap.add_argument("--yes", action="store_true", help="really move files back (default: dry run)")
+    ap.add_argument("--yes", action="store_true", help="really reverse (default: dry run)")
+
+
+def reverse(o) -> None:
+    """Undo one operation or raise OSError."""
+    if o["op"] == "install":
+        if o["error"] == "preexisting":
+            return  # was installed before this run: leave it
+        src_hash = fonts.digest(o["src"]) if os.path.exists(o["src"]) else None
+        fonts.uninstall(o["dst"], src_hash)
+        return
+    if o["op"] == "trash" and o["dst"].startswith("finder:"):
+        raise OSError("trashed through Finder: restore it with Put Back in the Trash")
+    if o["status"] == "copied":
+        # the original never left: only the copy has to go
+        if os.path.isdir(o["dst"]) and not os.path.islink(o["dst"]):
+            shutil.rmtree(o["dst"])
+        elif os.path.lexists(o["dst"]):
+            os.remove(o["dst"])
+        return
+    status, err = move_path(o["dst"], o["src"])
+    if status != "done":
+        raise OSError(err)
 
 
 def main():
@@ -39,7 +67,8 @@ def main():
     if not a.yes:
         print(f"DRY RUN: {len(ops)} operations of run {run_id} would be reversed")
         for o in ops[:15]:
-            print(f"  {o['dst']}\n    -> {o['src']}")
+            what = "uninstall" if o["op"] == "install" else "move back"
+            print(f"  {what:9} {o['dst']}\n            -> {o['src']}")
         print("Run again with --yes to execute.")
         return
 
@@ -47,20 +76,9 @@ def main():
         ok = failed = 0
         for o in ops:
             try:
-                if o["status"] == "copied":
-                    # the original is still in place: only the copy has to go
-                    if os.path.isdir(o["dst"]):
-                        import shutil
-                        shutil.rmtree(o["dst"])
-                    elif os.path.lexists(o["dst"]):
-                        os.remove(o["dst"])
-                    status = "done"
-                else:
-                    status, err = move_path(o["dst"], o["src"])
-                    if status != "done":
-                        raise OSError(err)
+                reverse(o)
             except OSError as e:
-                print(f"  failed: {o['dst']}: {e}")
+                print(f"  failed: {o['op']} {o['dst']}: {e}")
                 failed += 1
                 continue
             db.execute("UPDATE ops SET status='undone' WHERE id=?", (o["id"],))
@@ -74,7 +92,7 @@ def main():
         db.commit()
         run.status = "ok" if not failed else "partial"
         run.notes = f"undone={ok} failed={failed} of_run={run_id}"
-        print(f"undo run {run_id}: {ok} moved back, {failed} failed")
+        print(f"undo run {run_id}: {ok} operations reversed, {failed} failed")
 
 
 if __name__ == "__main__":

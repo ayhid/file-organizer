@@ -132,15 +132,22 @@ def main():
         removed = {(r["item_type"], r["item_id"]): r["reason"] for r in
                    db.execute("SELECT item_type, item_id, reason FROM dup_members WHERE role='remove'")}
 
+        installable = installable_exts(ctx.cfg)
+        marks = ",".join("?" * len(installable)) or "''"
         items = []
-        for u in db.execute("""SELECT u.id, u.root, u.kind, (SELECT MIN(mtime) FROM files WHERE unit_id=u.id) mtime
-                               FROM units u"""):
+        for u in db.execute(f"""SELECT u.id, u.root, u.kind,
+                                  (SELECT MIN(mtime) FROM files WHERE unit_id=u.id) mtime,
+                                  (SELECT COUNT(*) FROM files WHERE unit_id=u.id AND missing=0
+                                     AND ext IN ({marks})) fonts
+                                FROM units u""", installable):
             name = u["root"].rsplit("/", 1)[-1]
             items.append({"type": "unit", "id": u["id"], "path": u["root"], "name": name, "kind": u["kind"],
-                          "family": u["kind"], "ext": "", "mtime": u["mtime"] or 0, "size": 0})
+                          "family": u["kind"], "ext": "", "mtime": u["mtime"] or 0, "size": 0,
+                          "installable": u["fonts"] > 0})
         for f in db.execute("SELECT * FROM files WHERE missing=0 AND unit_id IS NULL"):
             items.append({"type": "file", "id": f["id"], "path": f["path"], "name": f["name"], "kind": "",
-                          "family": f["family"], "ext": f["ext"], "mtime": f["mtime"], "size": f["size"]})
+                          "family": f["family"], "ext": f["ext"], "mtime": f["mtime"], "size": f["size"],
+                          "installable": f["ext"] in installable})
 
         counts, complete = {}, True
         for n, it in enumerate(items):
@@ -228,8 +235,24 @@ def _decide(it, removed_reason, rules: Rules, pdf: PdfDates, min_year: int, keep
     target = rule["target"].format(year=year, client=client or "", kind=slugify(it["kind"] or "other"),
                                    family=it["family"] or "other").strip("/")
     target = re.sub(r"/+", "/", target)
-    return {**out, "rule": rule.get("name", "rule"), "action": "move", "target_dir": target,
+    action = "move"
+    if rule.get("action") == "install":
+        if it.get("installable"):
+            # installed into the system font folder, then the original goes to the Trash
+            action, target = "install", INSTALL_TARGET
+            out.update(dated=0, precision=None, date_found=None, date_source=None)
+        else:
+            reasons.append("no installable font: moved instead")
+    return {**out, "rule": rule.get("name", "rule"), "action": action, "target_dir": target,
             "needs_review": int(review), "reason": "; ".join(reasons) or None}
+
+
+INSTALL_TARGET = "_installed-fonts"
+
+
+def installable_exts(cfg) -> list[str]:
+    exts = cfg.get("fonts", {}).get("installable", [".ttf", ".otf", ".ttc", ".otc", ".dfont"])
+    return [e.lower() if e.startswith(".") else "." + e.lower() for e in exts]
 
 
 if __name__ == "__main__":

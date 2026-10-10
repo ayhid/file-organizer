@@ -5,7 +5,7 @@
   review.py export [--only review|all]    write reports/plan.csv (edit it in any spreadsheet)
   review.py import [--file plan.csv]      read edits back; every edited row becomes locked=1
 
-Editable columns: action (move | delete | skip), target_dir, new_name, needs_review.
+Editable columns: action (move | delete | skip | install), target_dir, new_name, needs_review.
 Locked rows are never overwritten by classify.py or rename.py.
 """
 import collections as C
@@ -19,7 +19,7 @@ from common import now_iso, setup  # noqa: E402
 COLUMNS = ["id", "item_type", "src", "action", "target_dir", "new_name", "needs_review", "reason",
            "rule", "family", "date_found", "date_source", "locked"]
 EDITABLE = ["action", "target_dir", "new_name", "needs_review"]
-ACTIONS = {"move", "delete", "skip"}
+ACTIONS = {"move", "delete", "skip", "install"}
 
 
 def add_args(ap):

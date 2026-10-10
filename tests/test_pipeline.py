@@ -1,6 +1,6 @@
 """End-to-end test on a synthetic folder. Run: python3 -m unittest discover -s tests -v
 
-Uses only fake names. Never touches your real state or rules: everything lives in a temp dir.
+Uses only fake names. Never touches your real state, rules, fonts or Trash: everything lives in a temp dir.
 """
 import os
 import shutil
@@ -16,14 +16,12 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "fo"))
 import common  # noqa: E402
 
-LOCAL_RULES = """
-[units]
-collections = ["Library"]
+OTF = b"OTTO"            # OpenType (CFF) header
+TTF = b"\x00\x01\x00\x00"  # TrueType header
 
-[[clients]]
-pattern = 'globex'
-slug = "globex"
-"""
+
+def font(header: bytes, body: str) -> bytes:
+    return header + body.encode()
 
 
 def write(path: Path, data: bytes | str = b"x", mtime: float | None = None):
@@ -40,8 +38,22 @@ class Pipeline(unittest.TestCase):
         src, cls.src = cls.tmp / "Downloads", cls.tmp / "Downloads"
         cls.dst = cls.tmp / "Organized"
         cls.state = cls.tmp / "state" / "state.db"
+        cls.fonts = cls.tmp / "Library" / "Fonts"
+        cls.trash = cls.tmp / "Trash"
         cls.local = cls.tmp / "rules.local.toml"
-        cls.local.write_text(LOCAL_RULES)
+        cls.local.write_text(f"""
+[units]
+collections = ["Library"]
+
+[fonts]
+install_dir = "{cls.fonts}"
+trash_dir = "{cls.trash}"
+trash_method = "dir"
+
+[[clients]]
+pattern = 'globex'
+slug = "globex"
+""")
         big = os.urandom(300_000)
 
         # a code project: identical files inside must NOT count as duplicates
@@ -53,9 +65,18 @@ class Pipeline(unittest.TestCase):
         write(src / "Library" / "starter-kit" / "package.json", "{}")
         write(src / "Library" / "starter-kit" / "index.js", "x")
         write(src / "Library" / "loose-note.md", "note")
-        # a font family
+        # a font family folder (with a licence file that goes to the Trash with it)
         for w in ("Regular", "Bold", "Light"):
-            write(src / "KO Sans" / f"KOSans-{w}.otf", w * 10)
+            write(src / "KO Sans" / f"KOSans-{w}.otf", font(OTF, w))
+        write(src / "KO Sans" / "OFL.txt", "licence")
+        # loose fonts
+        write(src / "Loose Sans.ttf", font(TTF, "loose"))
+        write(src / "Web Sans.woff2", b"wOF2web")                 # web font: moved, not installed
+        write(src / "Broken.otf", b"not a font at all")           # invalid: nothing installed or trashed
+        write(src / "Clash.otf", font(OTF, "mine"))               # a different Clash.otf is installed
+        write(src / "Same.otf", font(OTF, "same"))                # identical font already installed
+        write(cls.fonts / "Clash.otf", font(OTF, "theirs"))
+        write(cls.fonts / "Same.otf", font(OTF, "same"))
         # an app bundle
         write(src / "Tool.app" / "Contents" / "Info.plist", "plist")
         # standalone duplicates: keeper should be the one inside a folder, without copy suffix
@@ -67,11 +88,11 @@ class Pipeline(unittest.TestCase):
             write(src / d / "one.png", "img1")
             write(src / d / "two.png", "img2")
         # zip already extracted
-        write(src / "Fonts Bundle" / "a.ttf", "font-a")
-        write(src / "Fonts Bundle" / "b.ttf", "font-b")
-        with zipfile.ZipFile(src / "Fonts Bundle.zip", "w") as z:
-            z.writestr("Fonts Bundle/a.ttf", "font-a")
-            z.writestr("Fonts Bundle/b.ttf", "font-b")
+        write(src / "Script Bundle" / "a.js", "script-a")
+        write(src / "Script Bundle" / "b.js", "script-b")
+        with zipfile.ZipFile(src / "Script Bundle.zip", "w") as z:
+            z.writestr("Script Bundle/a.js", "script-a")
+            z.writestr("Script Bundle/b.js", "script-b")
         # zip NOT extracted
         with zipfile.ZipFile(src / "Other Bundle.zip", "w") as z:
             z.writestr("c.txt", "c")
@@ -82,7 +103,7 @@ class Pipeline(unittest.TestCase):
         write(src / "attestation sans date.pdf", "no date inside")
         write(src / "Globex specs.md", "spec")
         write(src / "Exercice maths 28_10_2025.pdf", "exercise")
-        write(src / "خط عربي.ttf", "arabic")
+        write(src / "ملاحظة عربية.txt", "arabic")
         write(src / ".ssh" / "id_ed25519", "secret")
         write(src / ".DS_Store", "junk")
 
@@ -126,14 +147,13 @@ class Pipeline(unittest.TestCase):
         self.assertIsNone(loose["unit_id"])
 
         # duplicates: nothing inside a unit, keeper is Documents/report.pdf
-        groups = db.execute("SELECT * FROM dup_groups").fetchall()
-        kinds = sorted(g["kind"] for g in groups)
+        kinds = sorted(g["kind"] for g in db.execute("SELECT * FROM dup_groups"))
         self.assertEqual(kinds, ["file", "unit", "zip"], kinds)
         keep = db.execute("""SELECT f.path FROM dup_members m JOIN files f ON f.id=m.item_id
                              WHERE m.item_type='file' AND m.role='keep'""").fetchone()
         self.assertEqual(keep["path"], "Documents/report.pdf")
         self.assertEqual(self.plan_for("report (1).pdf")["action"], "delete")
-        self.assertEqual(self.plan_for("Fonts Bundle.zip")["action"], "delete")
+        self.assertEqual(self.plan_for("Script Bundle.zip")["action"], "delete")
         self.assertEqual(self.plan_for("Other Bundle.zip")["action"], "move")
         removed_unit = db.execute("""SELECT u.root FROM dup_members m JOIN units u ON u.id=m.item_id
                                      WHERE m.item_type='unit' AND m.role='remove'""").fetchone()
@@ -153,14 +173,20 @@ class Pipeline(unittest.TestCase):
         self.assertEqual((p["target_dir"], p["new_name"]), ("work/clients/globex", "globex-specs.md"))
         p = self.plan_for("Exercice maths 28_10_2025.pdf")
         self.assertEqual((p["target_dir"], p["new_name"]), ("documents", "exercice-maths_2025-10-28.pdf"))
-        p = self.plan_for("KO Sans")
-        self.assertEqual((p["target_dir"], p["new_name"]), ("design/fonts", "ko-sans"))
         p = self.plan_for("my-app")
         self.assertEqual(p["target_dir"], "dev/projects")
         p = self.plan_for(".ssh")
         self.assertEqual((p["target_dir"], p["needs_review"]), ("_sensitive", 1))
-        p = self.plan_for("خط عربي.ttf")
-        self.assertEqual(p["new_name"], "خط-عربي.ttf")
+        p = self.plan_for("ملاحظة عربية.txt")
+        self.assertEqual(p["new_name"], "ملاحظة-عربية.txt")
+
+        # fonts: installable -> install (original name kept), web font -> moved
+        for name in ("KO Sans", "Loose Sans.ttf", "Broken.otf", "Clash.otf", "Same.otf"):
+            p = self.plan_for(name)
+            self.assertEqual((p["action"], p["new_name"]), ("install", name), name)
+        p = self.plan_for("Web Sans.woff2")
+        self.assertEqual((p["action"], p["target_dir"], p["new_name"]),
+                         ("move", "design/fonts/_loose", "web-sans.woff2"))
 
         # review export/import locks an edited row
         self.fo("review", "export")
@@ -175,21 +201,45 @@ class Pipeline(unittest.TestCase):
         self.assertEqual(self.plan_for("Globex specs.md")["new_name"], "globex-specifications.md")
 
         # dry run moves nothing
-        self.fo("apply")
+        out = self.fo("apply").stdout
+        self.assertIn("install", out)
         self.assertTrue((self.src / "report (1).pdf").exists())
+        self.assertFalse((self.fonts / "Loose Sans.ttf").exists())
 
-        # apply, then undo
+        # apply
         out = self.fo("apply", "--apply").stdout
         self.assertTrue((self.dst / "admin/invoices/2025/facture-globex_2025-03.pdf").exists(), out)
         self.assertTrue((self.dst / "_to_delete" / "report (1).pdf").exists())
-        self.assertTrue((self.dst / "design/fonts/ko-sans/KOSans-Bold.otf").exists())
         self.assertTrue((self.src / ".ssh").exists(), "review rows must not move")
         self.assertFalse((self.src / "my-app").exists())
+        # fonts installed and verified, originals in the Trash
+        for f in ("KOSans-Regular.otf", "KOSans-Bold.otf", "KOSans-Light.otf", "Loose Sans.ttf"):
+            self.assertTrue((self.fonts / f).exists(), f)
+        self.assertFalse((self.fonts / "OFL.txt").exists())
+        self.assertTrue((self.trash / "KO Sans" / "OFL.txt").exists())
+        self.assertTrue((self.trash / "Loose Sans.ttf").exists())
+        self.assertFalse((self.src / "KO Sans").exists())
+        self.assertTrue((self.dst / "design/fonts/_loose/web-sans.woff2").exists())
+        # same font already installed: counts as success
+        self.assertTrue((self.trash / "Same.otf").exists())
+        # invalid font and name clash: nothing installed, nothing trashed
+        self.assertTrue((self.src / "Broken.otf").exists())
+        self.assertFalse((self.fonts / "Broken.otf").exists())
+        self.assertTrue((self.src / "Clash.otf").exists())
+        self.assertEqual((self.fonts / "Clash.otf").read_bytes(), font(OTF, "theirs"))
+        self.assertEqual(self.plan_for("Broken.otf")["status"], "error")
 
+        # undo restores everything, uninstalls only what the run installed
         self.fo("undo", "--last", "--yes")
         self.assertTrue((self.src / "report (1).pdf").exists())
         self.assertTrue((self.src / "my-app" / "src" / "a.ts").exists())
         self.assertFalse((self.dst / "admin/invoices/2025/facture-globex_2025-03.pdf").exists())
+        self.assertTrue((self.src / "KO Sans" / "OFL.txt").exists())
+        self.assertTrue((self.src / "Loose Sans.ttf").exists())
+        self.assertFalse((self.fonts / "KOSans-Bold.otf").exists())
+        self.assertFalse((self.fonts / "Loose Sans.ttf").exists())
+        self.assertTrue((self.fonts / "Same.otf").exists(), "pre-existing font must stay installed")
+        self.assertTrue((self.src / "Same.otf").exists())
 
 
 class Helpers(unittest.TestCase):

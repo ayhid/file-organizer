@@ -5,6 +5,7 @@
           (the date is taken out of the name first, so it never appears twice)
   unit  : lowercase-slug of the folder name, its content is never renamed
   delete: original name kept (it only moves to _to_delete)
+  install: original name kept (fonts are installed under their own file name)
 
 Name clashes inside the same target folder get -2, -3... (also against files already on disk).
 Rows edited by hand (locked=1) keep their name but still reserve it.
@@ -23,8 +24,8 @@ def build_name(row, cfg, min_year) -> str:
     rcfg = cfg.get("rename", {})
     max_len = int(rcfg.get("max_length", 80))
     name = os.path.basename(row["src"])
-    if row["action"] == "delete":
-        return name
+    if row["action"] in ("delete", "install"):
+        return name  # trashed or installed under its original name
     if row["item_type"] == "unit":
         return _slug(strip_copy_suffix(name), max_len) or "folder"
 

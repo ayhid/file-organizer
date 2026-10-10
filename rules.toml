@@ -56,6 +56,16 @@ firmware = ["bin", "bbf", "hex", "uf2", "fw"]
 email = ["eml", "msg", "mbox"]
 link = ["webloc", "url"]
 
+# --------------------------------------------------------------------------- fonts
+# Rules with action = "install" copy fonts into install_dir, check every copy (identical bytes +
+# valid font header) and only then move the original to the Trash. A font already installed with
+# the same content counts as installed; a DIFFERENT font with the same file name blocks the item.
+[fonts]
+install_dir = "~/Library/Fonts"     # macOS per-user fonts, active right away
+trash_dir = "~/.Trash"
+trash_method = "auto"               # auto: move into trash_dir, else Finder (Put Back) | dir | finder
+installable = [".ttf", ".otf", ".ttc", ".otc", ".dfont"]
+
 # --------------------------------------------------------------------------- units
 [units]
 # a unit's kind is its dominant family when that family holds at least this share of its files
@@ -165,6 +175,7 @@ use_pdf_metadata = true
 #   dated    = true -> the date goes before the extension: name_YYYY-MM-DD.ext
 #   precision= "day" | "month" | "year"
 #   review   = true -> always flagged for review
+#   action   = "install" -> fonts: install then trash (see [fonts]); `target` is the fallback
 
 [[classify.rules]]
 name = "credentials"
@@ -191,7 +202,8 @@ target = "software/apps"
 name = "font-families"
 item = "unit"
 kind = ["font"]
-target = "design/fonts"
+action = "install"          # install every font of the folder, then trash the folder
+target = "design/fonts"     # used instead when the folder holds no installable font (web fonts only)
 
 [[classify.rules]]
 name = "embroidery-sets"
@@ -358,7 +370,8 @@ target = "design/sources"
 [[classify.rules]]
 name = "fonts"
 family = ["font"]
-target = "design/fonts/_loose"
+action = "install"          # .ttf .otf .ttc .otc .dfont: install, then trash
+target = "design/fonts/_loose"   # web fonts (.woff, .woff2, .eot) cannot be installed: moved here
 
 [[classify.rules]]
 name = "embroidery"

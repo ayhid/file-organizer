@@ -22,8 +22,8 @@ adds to it, and can be re-run: unchanged files are never re-hashed, hand edits a
 | 6 | `fo/classify.py` | Decides the target folder of every standalone file and unit from `rules.toml` |
 | 7 | `fo/rename.py` | Computes new names |
 | 8 | `fo/review.py` | `summary`, `export` the plan to CSV, `import` your edits |
-| 9 | `fo/apply.py` | Dry run by default; `--apply` executes and logs every move |
-| 10 | `fo/undo.py` | `--last --yes` or `--run N --yes` moves everything back |
+| 9 | `fo/apply.py` | Dry run by default; `--apply` executes (move, delete, install fonts) and logs every operation |
+| 10 | `fo/undo.py` | `--last --yes` or `--run N --yes` reverses everything (moves back, restores from Trash, uninstalls) |
 
 ```bash
 ./run.sh                                   # steps 1 to 7 + summary, moves nothing
@@ -50,6 +50,15 @@ for review. Accents are removed from Latin letters, other scripts are kept.
 **Duplicates.** Keeper = best-classified path: not in `[dupes].avoid`, earliest `[dupes].prefer`
 match, inside a folder rather than loose, no copy suffix (` (1)`, ` 2`, `copy`), oldest, shortest
 path. Redundant copies go to `<target>/_to_delete/`; you empty it yourself.
+
+**Fonts.** Rules with `action = "install"` (on by default for font families and loose fonts)
+copy every `.ttf .otf .ttc .otc .dfont` into `[fonts].install_dir` (`~/Library/Fonts` on macOS,
+active right away), check each copy (identical bytes + valid font header), and only when all of
+them succeeded move the original file or folder to the Trash. A font already installed with the
+same content counts as installed; a different font with the same file name blocks the item and
+nothing is trashed. Web fonts (`.woff`, `.woff2`, `.eot`) can't be installed and are moved to
+`design/fonts/_loose`. `undo.py` takes the item out of the Trash and uninstalls only the fonts
+that run installed.
 
 **Review.** Rows are flagged when the name says nothing (uuid, hex, `IMG_1234`), a dated rule found
 no date, no rule matched, or the rule asks for it (credentials, mixed folders). Flagged rows are
