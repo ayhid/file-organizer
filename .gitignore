@@ -13,3 +13,6 @@ __pycache__/
 *.pyc
 .DS_Store
 tests/_tmp/
+.coverage
+.hypothesis/
+htmlcov/
