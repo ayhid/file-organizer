@@ -5,6 +5,10 @@
 #   FO_HOME     state, personal rules, reports, logs    (default $FO_SOURCE/.file-organizer)
 #   FO_TARGET   organised tree root                     (default ~/Documents/Organized)
 #   MAX_SECONDS stop after this many seconds and exit 3 so the caller runs it again (0 = no limit)
+#   FO_PATH_ALIAS  space-separated FROM=TO prefixes rewritten in the HTML report (paths seen through a mount)
+#   FO_REPO_DIR    repository path shown in the report's commands (default: this repo)
+#
+# The HTML report shows $FO_HOME/reports/notes.md at the top when it exists (written by the review).
 #
 # Exit codes: 0 plan ready, 3 time budget reached (run again, it resumes), other = error.
 # Last line of output is "ROUTINE: DONE" or "ROUTINE: RESUME".
@@ -64,4 +68,9 @@ step rename
 step review summary
 step review export --only review --file "$FO_HOME/reports/review.csv"
 step review export --only all --file "$FO_HOME/reports/plan.csv"
+REPORT=()
+for a in ${FO_PATH_ALIAS:-}; do REPORT+=(--path-alias "$a"); done
+[ -n "${FO_REPO_DIR:-}" ] && REPORT+=(--repo-dir "$FO_REPO_DIR")
+[ -f "$FO_HOME/reports/notes.md" ] && REPORT+=(--notes "$FO_HOME/reports/notes.md")
+step report ${REPORT[@]+"${REPORT[@]}"}
 echo "ROUTINE: DONE"

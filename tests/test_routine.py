@@ -35,6 +35,15 @@ class Routine(unittest.TestCase):
              "PYTHON": sys.executable, **{k: str(v) for k, v in env.items()}}
         return subprocess.run(["bash", str(REPO / "routine.sh")], capture_output=True, text=True, env=e)
 
+    def test_report_uses_aliases_and_notes(self):
+        write(self.home / "reports/notes.md", "- revue faite")
+        p = self.run_routine(FO_PATH_ALIAS=f"{self.tmp}=/Users/me", FO_REPO_DIR="/Users/me/fo")
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        page = (self.home / "reports/report.html").read_text(encoding="utf-8")
+        self.assertIn("<li>revue faite</li>", page)
+        self.assertIn("cd /Users/me/fo && python3 fo/apply.py", page)
+        self.assertNotIn(str(self.tmp), page)
+
     def test_full_run_plans_and_moves_nothing(self):
         before = {k: v for k, v in snapshot(self.src).items() if not k.startswith(".file-organizer")}
         p = self.run_routine()
@@ -43,7 +52,8 @@ class Routine(unittest.TestCase):
         after = {k: v for k, v in snapshot(self.src).items() if not k.startswith(".file-organizer")}
         self.assertEqual(after, before, "the routine never moves anything")
         self.assertFalse((self.tmp / "Organized").exists())
-        for f in ("state.db", "reports/review.csv", "reports/plan.csv", "reports/profile.md", "reports/dupes.csv"):
+        for f in ("state.db", "reports/review.csv", "reports/plan.csv", "reports/profile.md", "reports/dupes.csv",
+                  "reports/report.html"):
             self.assertTrue((self.home / f).exists(), f)
         con = sqlite3.connect(self.home / "state.db")
         try:

@@ -31,10 +31,12 @@ step profile "$@" || exit $?
 resumable classify "$@"
 step rename "$@" || exit $?
 step review summary "$@" || exit $?
+step report "$@" || exit $?
 
 cat <<EOF
 
 Next:
+  open the HTML report: reports/report.html (next to the state file)
   $PY $DIR/fo/review.py export --only review   # edit reports/plan.csv, then:
   $PY $DIR/fo/review.py import
   $PY $DIR/fo/apply.py                         # dry run

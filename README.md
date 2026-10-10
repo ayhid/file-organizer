@@ -22,6 +22,7 @@ adds to it, and can be re-run: unchanged files are never re-hashed, hand edits a
 | 6 | `fo/classify.py` | Decides the target folder of every standalone file and unit from `rules.toml` |
 | 7 | `fo/rename.py` | Computes new names |
 | 8 | `fo/review.py` | `summary`, `export` the plan to CSV, `import` your edits |
+| 8b | `fo/report.py` | Human friendly HTML report (`reports/report.html`, one offline page): KPIs, filters, search, and every row opens its details on click (full paths, rule, reason, dates, unit content, duplicate group) |
 | 9 | `fo/apply.py` | Dry run by default; `--apply` executes (move, delete, install fonts) and logs every operation |
 | 10 | `fo/undo.py` | `--last --yes` or `--run N --yes` reverses everything (moves back, restores from Trash, uninstalls) |
 
@@ -74,8 +75,14 @@ anything. State, personal rules, reports and logs live in `FO_HOME` (default
 FO_SOURCE=~/Downloads MAX_SECONDS=170 ./routine.sh   # exit 3 + "ROUTINE: RESUME" = call again
 ```
 
-Outputs: `reports/review.csv` (rows that need a decision), `reports/plan.csv`, `reports/profile.md`,
-`reports/dupes.csv`. You then review and run `fo/apply.py --apply` yourself.
+Outputs: `reports/report.html` (open it in a browser: the readable view of the plan, also kept as
+`report-YYYY-MM-DD.html`), `reports/review.csv` (rows that need a decision), `reports/plan.csv`,
+`reports/profile.md`, `reports/dupes.csv`. You then review and run `fo/apply.py --apply` yourself.
+
+The report shows `reports/notes.md` at the top when it exists. `FO_PATH_ALIAS="FROM=TO ..."` rewrites
+path prefixes in the report (when the routine runs through a mount) and `FO_REPO_DIR` sets the repo
+path shown in its commands. "New" and "decided" compare with the previous report; re-running the
+routine the same day keeps the same baseline.
 
 **Fonts** need macOS itself. `macos/install-fonts-job.sh` installs a launchd agent (weekly, Sunday
 22:00 by default) that runs `apply.py --only install --apply` against the same state:
